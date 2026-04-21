@@ -1,24 +1,18 @@
 import { createServer } from "node:http"
 import { connectNodeAdapter } from "@connectrpc/connect-node"
-import { createToolServer, SessionResolver, bootstrapToolServer, aggregatePkgs } from "@openzerg/common/tool-server-sdk"
-import { openMemoryDB, autoMigrate } from "./db.js"
+import { createToolServer, SessionResolver, bootstrapToolServer, aggregatePkgs } from "@openzerg/common-typescript/tool-server-sdk"
+import { openDB } from "./db.js"
 import { createMemoryTools } from "./tools/index.js"
 
 const PORT = parseInt(process.env.PORT ?? "25030", 10)
-const DATABASE_URL = process.env.DATABASE_URL ?? ""
+const GEL_DSN = process.env.GEL_DSN ?? "gel://admin@localhost/main?tls_security=insecure"
 const REGISTRY_URL = process.env.REGISTRY_URL ?? "http://localhost:25000"
 const REGISTRY_TOKEN = process.env.REGISTRY_TOKEN ?? ""
 const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://tool-memory:${PORT}`
 const HEARTBEAT_SEC = parseInt(process.env.HEARTBEAT_INTERVAL_SEC ?? "30", 10)
 
 async function main() {
-  if (!DATABASE_URL) {
-    console.error("DATABASE_URL is required")
-    process.exit(1)
-  }
-
-  const db = openMemoryDB(DATABASE_URL)
-  await autoMigrate(db)
+  const db = openDB(GEL_DSN)
 
   const resolver = new SessionResolver({
     registryUrl: REGISTRY_URL,

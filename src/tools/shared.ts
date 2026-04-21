@@ -1,8 +1,8 @@
-import type { ToolContext } from "@openzerg/common/tool-server-sdk"
+import type { ToolContext } from "@openzerg/common-typescript/tool-server-sdk"
 import type { DB } from "../db.js"
 import { ResultAsync, okAsync, errAsync } from "neverthrow"
-import { AppError, ValidationError, NotFoundError, toAppError } from "@openzerg/common"
-import { randomUUID } from "node:crypto"
+import { AppError, ValidationError, NotFoundError, toAppError } from "@openzerg/common-typescript"
+import { gelQuery } from "@openzerg/common-typescript/gel"
 
 export function getBucket(ctx: ToolContext): string {
   const memoryConfig = ctx.serverConfigs?.["tool-memory"]
@@ -10,10 +10,9 @@ export function getBucket(ctx: ToolContext): string {
 }
 
 export function dbOp<T>(fn: () => Promise<T>): ResultAsync<T, AppError> {
-  return ResultAsync.fromPromise(fn(), toAppError)
+  return gelQuery(fn)
 }
 
 export { ResultAsync, okAsync, errAsync }
 export { AppError, NotFoundError, ValidationError, toAppError }
-export { randomUUID }
 export type { DB }

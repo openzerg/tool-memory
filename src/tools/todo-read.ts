@@ -1,5 +1,6 @@
-import type { ITool } from "@openzerg/common/tool-server-sdk"
+import type { ITool } from "@openzerg/common-typescript/tool-server-sdk"
 import { dbOp, type DB, ResultAsync, toAppError } from "./shared.js"
+import * as queries from "../generated/queries.js"
 
 export function createTodoRead(db: DB): ITool {
   return {
@@ -14,8 +15,7 @@ export function createTodoRead(db: DB): ITool {
       return ResultAsync.fromPromise(getContext(sessionToken), toAppError).andThen((ctx) => {
         const sessionId = ctx.sessionId
         return dbOp(() =>
-          db.selectFrom("todo_entries").selectAll()
-            .where("session_id", "=", sessionId).orderBy("position", "asc").execute()
+          queries.selectBySession(db, { sessionId })
         ).map((rows) => ({
           todos: rows.map((r) => ({
             content: r.content,

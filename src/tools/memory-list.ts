@@ -1,5 +1,6 @@
-import type { ITool } from "@openzerg/common/tool-server-sdk"
+import type { ITool } from "@openzerg/common-typescript/tool-server-sdk"
 import { getBucket, dbOp, type DB, ResultAsync, toAppError } from "./shared.js"
+import * as queries from "../generated/queries.js"
 
 export function createMemoryList(db: DB): ITool {
   return {
@@ -14,9 +15,8 @@ export function createMemoryList(db: DB): ITool {
       return ResultAsync.fromPromise(getContext(sessionToken), toAppError).andThen((ctx) => {
         const bucket = getBucket(ctx)
         return dbOp(() =>
-          db.selectFrom("memory_entries").select(["key", "updated_at"])
-            .where("bucket_name", "=", bucket).orderBy("updated_at", "desc").execute()
-        ).map((rows) => ({ entries: rows.map(r => ({ key: r.key, updatedAt: Number(r.updated_at) })) }))
+          queries.listByBucket(db, { bucketName: bucket })
+        ).map((rows) => ({ entries: rows.map(r => ({ key: r.key, updatedAt: r.updatedAt })) }))
       })
     },
   }

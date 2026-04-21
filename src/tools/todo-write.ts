@@ -1,7 +1,8 @@
-import type { ITool } from "@openzerg/common/tool-server-sdk"
-import { parseArgs } from "@openzerg/common/tool-server-sdk"
+import type { ITool } from "@openzerg/common-typescript/tool-server-sdk"
+import { parseArgs } from "@openzerg/common-typescript/tool-server-sdk"
 import { z } from "zod"
-import { getBucket, dbOp, okAsync, type DB, ResultAsync, toAppError } from "./shared.js"
+import { dbOp, okAsync, type DB, ResultAsync, toAppError } from "./shared.js"
+import * as queries from "../generated/queries.js"
 
 const VALID_STATUSES = new Set(["pending", "in_progress", "completed", "cancelled"])
 const VALID_PRIORITIES = new Set(["high", "medium", "low"])
@@ -44,21 +45,21 @@ export function createTodoWrite(db: DB): ITool {
       return parseArgs(Args, argsJson).asyncAndThen((args) => {
         return ResultAsync.fromPromise(getContext(sessionToken), toAppError).andThen((ctx) => {
           const sessionId = ctx.sessionId
-          const now = BigInt(Date.now())
-          return dbOp(() =>
-            db.deleteFrom("todo_entries").where("session_id", "=", sessionId).execute()
-          ).andThen(() => {
-            if (args.todos.length === 0) return okAsync({ success: true })
-            const rows = args.todos.map((t, position) => ({
-              session_id: sessionId,
-              position,
-              content: t.content,
-              status: VALID_STATUSES.has(t.status ?? "") ? t.status! : "pending",
-              priority: VALID_PRIORITIES.has(t.priority ?? "") ? t.priority! : "medium",
-              created_at: now,
-              updated_at: now,
-            }))
-            return dbOp(() => db.insertInto("todo_entries").values(rows).execute()).map(() => ({ success: true }))
+          const ts = Number(BigInt(Date.now()))
+          return dbOp(async () => {
+            await queries.deleteBySession(db, { sessionId })
+            for (let position = 0; position < args.todos.length; position++) {
+              const t = args.todos[position]
+              await queries.insertTodo(db, {
+                sessionId,
+                position,
+                content: t.content,
+                status: VALID_STATUSES.has(t.status ?? "") ? t.status! : "pending",
+                priority: VALID_PRIORITIES.has(t.priority ?? "") ? t.priority! : "medium",
+                ts,
+              })
+            }
+            return { success: true }
           })
         })
       })

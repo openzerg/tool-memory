@@ -1,4 +1,4 @@
-import type { ITool } from "@openzerg/common/tool-server-sdk"
+import type { ITool } from "@openzerg/common-typescript/tool-server-sdk"
 import type { DB } from "../db.js"
 import { createMemorySave } from "./memory-save.js"
 import { createMemoryRead } from "./memory-read.js"

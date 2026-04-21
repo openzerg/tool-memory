@@ -1,7 +1,8 @@
-import type { ITool } from "@openzerg/common/tool-server-sdk"
-import { parseArgs } from "@openzerg/common/tool-server-sdk"
+import type { ITool } from "@openzerg/common-typescript/tool-server-sdk"
+import { parseArgs } from "@openzerg/common-typescript/tool-server-sdk"
 import { z } from "zod"
-import { getBucket, dbOp, errAsync, okAsync, randomUUID, type DB, ResultAsync, toAppError } from "./shared.js"
+import { getBucket, dbOp, errAsync, okAsync, type DB, ResultAsync, toAppError } from "./shared.js"
+import * as queries from "../generated/queries.js"
 
 const Args = z.object({ key: z.string(), value: z.string() })
 
@@ -25,25 +26,10 @@ export function createMemorySave(db: DB): ITool {
       return parseArgs(Args, argsJson).asyncAndThen((args) => {
         return ResultAsync.fromPromise(getContext(sessionToken), toAppError).andThen((ctx) => {
           const bucket = getBucket(ctx)
-          const now = BigInt(Date.now())
+          const ts = Number(BigInt(Date.now()))
           return dbOp(() =>
-            db.selectFrom("memory_entries").selectAll()
-              .where("bucket_name", "=", bucket).where("key", "=", args.key)
-              .executeTakeFirst()
-          ).andThen((existing) => {
-            if (existing) {
-              return dbOp(() =>
-                db.updateTable("memory_entries").set({ value: args.value, updated_at: now })
-                  .where("id", "=", existing.id).execute()
-              )
-            }
-            return dbOp(() =>
-              db.insertInto("memory_entries").values({
-                id: randomUUID(), bucket_name: bucket, key: args.key,
-                value: args.value, created_at: now, updated_at: now,
-              }).execute()
-            )
-          }).map(() => ({ success: true }))
+            queries.upsert(db, { bucketName: bucket, key: args.key, value: args.value, ts })
+          ).map(() => ({ success: true }))
         })
       })
     },
